@@ -38,7 +38,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Terminal,
-  Globe,
   Sparkles,
   MousePointer2,
   Check,
@@ -53,10 +52,11 @@ type AdapterType =
   | "claude_local"
   | "codex_local"
   | "opencode_local"
+  | "pi_local"
   | "cursor"
   | "process"
   | "http"
-  | "openclaw";
+  | "openclaw_gateway";
 
 const DEFAULT_TASK_DESCRIPTION = `Setup yourself as the CEO. Use the ceo persona found here: [https://github.com/paperclipai/companies/blob/main/default/ceo/AGENTS.md](https://github.com/paperclipai/companies/blob/main/default/ceo/AGENTS.md)
 
@@ -500,10 +500,6 @@ export function OnboardingWizard() {
     setLoading(false);
     reset();
     closeOnboarding();
-    if (createdCompanyPrefix && createdIssueRef) {
-      navigate(`/${createdCompanyPrefix}/issues/${createdIssueRef}`);
-      return;
-    }
     if (createdCompanyPrefix) {
       navigate(`/${createdCompanyPrefix}/dashboard`);
       return;
@@ -666,39 +662,38 @@ export function OnboardingWizard() {
                           desc: "Local multi-provider agent"
                         },
                         {
-                          value: "openclaw" as const,
-                          label: "OpenClaw",
+                          value: "pi_local" as const,
+                          label: "Pi",
+                          icon: Terminal,
+                          desc: "Local Pi agent"
+                        },
+                        {
+                          value: "openclaw_gateway" as const,
+                          label: "OpenClaw Gateway",
                           icon: Bot,
-                          desc: "Notify OpenClaw webhook"
+                          desc: "Invoke OpenClaw via gateway protocol",
+                          disabledLabel: "Configure OpenClaw within the App"
                         },
                         {
                           value: "cursor" as const,
                           label: "Cursor",
                           icon: MousePointer2,
                           desc: "Local Cursor agent"
-                        },
-                        {
-                          value: "process" as const,
-                          label: "Shell Command",
-                          icon: Terminal,
-                          desc: "Run a process"
-                        },
-                        {
-                          value: "http" as const,
-                          label: "HTTP Webhook",
-                          icon: Globe,
-                          desc: "Call an endpoint"
                         }
                       ].map((opt) => (
                         <button
                           key={opt.value}
+                          disabled={!!opt.comingSoon}
                           className={cn(
                             "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative",
-                            adapterType === opt.value
-                              ? "border-foreground bg-accent"
-                              : "border-border hover:bg-accent/50"
+                            opt.comingSoon
+                              ? "border-border opacity-40 cursor-not-allowed"
+                              : adapterType === opt.value
+                                ? "border-foreground bg-accent"
+                                : "border-border hover:bg-accent/50"
                           )}
                           onClick={() => {
+                            if (opt.comingSoon) return;
                             const nextType = opt.value as AdapterType;
                             setAdapterType(nextType);
                             if (nextType === "codex_local" && !model) {
@@ -716,14 +711,17 @@ export function OnboardingWizard() {
                           }}
                         >
                           {opt.recommended && (
-                            <span className="absolute -top-1.5 -right-1.5 bg-green-500 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none">
+                            <span className="absolute -top-1.5 right-1.5 bg-green-500 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none">
                               Recommended
                             </span>
                           )}
                           <opt.icon className="h-4 w-4" />
                           <span className="font-medium">{opt.label}</span>
                           <span className="text-muted-foreground text-[10px]">
-                            {opt.desc}
+                            {opt.comingSoon
+                              ? (opt as { disabledLabel?: string }).disabledLabel ??
+                                "Coming soon"
+                              : opt.desc}
                           </span>
                         </button>
                       ))}
@@ -734,6 +732,7 @@ export function OnboardingWizard() {
                   {(adapterType === "claude_local" ||
                     adapterType === "codex_local" ||
                     adapterType === "opencode_local" ||
+                    adapterType === "pi_local" ||
                     adapterType === "cursor") && (
                     <div className="space-y-3">
                       <div>
@@ -966,14 +965,14 @@ export function OnboardingWizard() {
                     </div>
                   )}
 
-                  {(adapterType === "http" || adapterType === "openclaw") && (
+                  {(adapterType === "http" || adapterType === "openclaw_gateway") && (
                     <div>
                       <label className="text-xs text-muted-foreground mb-1 block">
-                        Webhook URL
+                        {adapterType === "openclaw_gateway" ? "Gateway URL" : "Webhook URL"}
                       </label>
                       <input
                         className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
-                        placeholder="https://..."
+                        placeholder={adapterType === "openclaw_gateway" ? "ws://127.0.0.1:18789" : "https://..."}
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                       />
