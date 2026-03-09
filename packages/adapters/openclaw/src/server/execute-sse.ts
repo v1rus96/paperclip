@@ -423,12 +423,24 @@ export async function executeSse(ctx: AdapterExecutionContext, url: string): Pro
       };
     }
 
+    // Extract usage from the OpenClaw response payload
+    const responsePayload = consumed.lastPayload;
+    const rawUsage = responsePayload?.usage as Record<string, unknown> | undefined;
+    const usage = rawUsage
+      ? {
+          inputTokens: Number(rawUsage.input_tokens ?? rawUsage.inputTokens ?? 0),
+          outputTokens: Number(rawUsage.output_tokens ?? rawUsage.outputTokens ?? 0),
+          cachedInputTokens: Number(rawUsage.cached_input_tokens ?? rawUsage.cachedInputTokens ?? 0),
+        }
+      : undefined;
+
     return {
       exitCode: 0,
       signal: null,
       timedOut: false,
       provider: "openclaw",
-      model: null,
+      model: nonEmpty(responsePayload?.model) ?? null,
+      usage,
       summary: `OpenClaw SSE ${state.method} ${url}`,
       resultJson: {
         eventCount: consumed.eventCount,
