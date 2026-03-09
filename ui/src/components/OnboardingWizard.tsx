@@ -692,17 +692,13 @@ export function OnboardingWizard() {
                       ].map((opt) => (
                         <button
                           key={opt.value}
-                          disabled={!!opt.comingSoon}
                           className={cn(
                             "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative",
-                            opt.comingSoon
-                              ? "border-border opacity-40 cursor-not-allowed"
-                              : adapterType === opt.value
-                                ? "border-foreground bg-accent"
-                                : "border-border hover:bg-accent/50"
+                            adapterType === opt.value
+                              ? "border-foreground bg-accent"
+                              : "border-border hover:bg-accent/50"
                           )}
                           onClick={() => {
-                            if (opt.comingSoon) return;
                             const nextType = opt.value as AdapterType;
                             setAdapterType(nextType);
                             if (nextType === "codex_local" && !model) {
@@ -727,7 +723,7 @@ export function OnboardingWizard() {
                           <opt.icon className="h-4 w-4" />
                           <span className="font-medium">{opt.label}</span>
                           <span className="text-muted-foreground text-[10px]">
-                            {opt.comingSoon ? "Coming soon" : opt.desc}
+                            {opt.desc}
                           </span>
                         </button>
                       ))}
