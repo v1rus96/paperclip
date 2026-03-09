@@ -424,22 +424,24 @@ export async function executeSse(ctx: AdapterExecutionContext, url: string): Pro
     }
 
     // Extract usage from the OpenClaw response payload
+    // Usage may be at top level or nested under .response (response.completed event)
     const responsePayload = consumed.lastPayload;
-    const rawUsage = responsePayload?.usage as Record<string, unknown> | undefined;
-    const usage = rawUsage
-      ? {
-          inputTokens: Number(rawUsage.input_tokens ?? rawUsage.inputTokens ?? 0),
-          outputTokens: Number(rawUsage.output_tokens ?? rawUsage.outputTokens ?? 0),
-          cachedInputTokens: Number(rawUsage.cached_input_tokens ?? rawUsage.cachedInputTokens ?? 0),
-        }
+    const nestedResponse = responsePayload?.response as Record<string, unknown> | undefined;
+    const rawUsage = (responsePayload?.usage ?? nestedResponse?.usage) as Record<string, unknown> | undefined;
+    const inputTokens = Number(rawUsage?.input_tokens ?? rawUsage?.inputTokens ?? 0);
+    const outputTokens = Number(rawUsage?.output_tokens ?? rawUsage?.outputTokens ?? 0);
+    const cachedInputTokens = Number(rawUsage?.cached_input_tokens ?? rawUsage?.cachedInputTokens ?? 0);
+    const usage = (inputTokens > 0 || outputTokens > 0)
+      ? { inputTokens, outputTokens, cachedInputTokens }
       : undefined;
+    const resolvedModel = nonEmpty(responsePayload?.model) ?? nonEmpty(nestedResponse?.model) ?? null;
 
     return {
       exitCode: 0,
       signal: null,
       timedOut: false,
       provider: "openclaw",
-      model: nonEmpty(responsePayload?.model) ?? null,
+      model: resolvedModel,
       usage,
       summary: `OpenClaw SSE ${state.method} ${url}`,
       resultJson: {
